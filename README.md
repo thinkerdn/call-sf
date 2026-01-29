@@ -40,12 +40,60 @@ SF_SECURITY_TOKEN=your_security_token
 SF_DOMAIN=login  # サンドボックスの場合は 'test'
 ```
 
-### 3. Salesforceセキュリティトークンの取得方法
+### 3. 認証方法の選択
+
+このアプリケーションは2つの認証方法をサポートしています：
+
+#### 方法A: ユーザー名・パスワード認証（従来の方法）
+
+Salesforceセキュリティトークンを使用します。
 
 1. Salesforceにログイン
 2. 右上のユーザーアイコンをクリック → **設定**
 3. 左メニューから **私の個人情報** → **私のセキュリティトークンのリセット**
 4. メールで送られてくるセキュリティトークンをコピー
+5. `.env`ファイルに設定
+
+```env
+SF_USERNAME=your_username@example.com
+SF_PASSWORD=your_password
+SF_SECURITY_TOKEN=your_security_token
+SF_DOMAIN=login
+```
+
+#### 方法B: OAuth 2.0認証（推奨 - SOAP APIが無効な場合）
+
+SOAP APIが無効になっている組織では、OAuth 2.0認証を使用する必要があります。
+
+**Connected Appの作成手順：**
+
+1. Salesforceにログイン
+2. **設定** → **アプリケーション** → **アプリケーションマネージャ**
+3. **新規接続アプリケーション**をクリック
+4. 以下の情報を入力：
+   - **接続アプリケーション名**: 任意の名前（例: Python API Client）
+   - **API 参照名**: 自動入力されます
+   - **取引先責任者メール**: あなたのメールアドレス
+5. **API (OAuth 設定の有効化)** にチェック
+6. **コールバック URL**: `https://login.salesforce.com/services/oauth2/success`
+7. **選択した OAuth 範囲**に以下を追加：
+   - `Full access (full)`
+   - `Perform requests at any time (refresh_token, offline_access)`
+8. **保存**をクリック
+9. 作成後、**コンシューマの詳細を管理**をクリック
+10. **Consumer Key**と**Consumer Secret**をコピー
+11. `.env`ファイルに設定
+
+```env
+SF_USERNAME=your_username@example.com
+SF_PASSWORD=your_password
+SF_SECURITY_TOKEN=your_security_token  # OAuth使用時は省略可
+SF_DOMAIN=login
+SF_CONSUMER_KEY=your_consumer_key
+SF_CONSUMER_SECRET=your_consumer_secret
+```
+
+**注意:** `SF_CONSUMER_KEY`と`SF_CONSUMER_SECRET`が設定されている場合、OAuth 2.0認証が優先されます。
 
 ## 使い方
 
@@ -170,11 +218,24 @@ call-sf/
 
 ## トラブルシューティング
 
+### SOAP APIが無効というエラーが発生する場合
+
+```
+INVALID_OPERATION: SOAP API login() is disabled by default in this org.
+```
+
+このエラーが発生した場合は、OAuth 2.0認証を使用してください：
+
+1. 上記の「方法B: OAuth 2.0認証」の手順に従ってConnected Appを作成
+2. Consumer KeyとSecretを`.env`ファイルに設定
+3. アプリケーションを再実行
+
 ### 認証エラーが発生する場合
 
 - ユーザー名、パスワード、セキュリティトークンが正しいか確認
 - セキュリティトークンは、パスワード変更時にリセットされます
 - サンドボックス環境の場合、`SF_DOMAIN=test`に設定されているか確認
+- OAuth認証を使用する場合、Consumer KeyとSecretが正しいか確認
 
 ### API制限について
 
